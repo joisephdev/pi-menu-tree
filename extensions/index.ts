@@ -1,10 +1,11 @@
-import { CustomEditor, type ExtensionAPI, type KeybindingsManager, type SlashCommandSource } from "@earendil-works/pi-coding-agent";
+import { CustomEditor, type ExtensionAPI, type SlashCommandSource } from "@earendil-works/pi-coding-agent";
 import {
   Key,
   matchesKey,
   SelectList,
   truncateToWidth,
   type AutocompleteProvider,
+  type EditorComponent,
   type EditorTheme,
   type SelectItem,
   type TUI,
@@ -36,6 +37,10 @@ interface CommandGroups {
   extension: SelectItem[];
   skill: SelectItem[];
   prompt: SelectItem[];
+}
+
+interface FocusableEditor extends EditorComponent {
+  focused?: boolean;
 }
 
 const CATEGORY_PRESENTATION: Readonly<Record<CommandCategory, CategoryPresentation>> = {
@@ -82,12 +87,8 @@ function isCategory(value: string): value is CommandCategory {
   return CATEGORIES.some((category) => category === value);
 }
 
-function emptyCommandGroups(): CommandGroups {
-  return { builtin: [...BUILTIN_COMMANDS], extension: [], skill: [], prompt: [] };
-}
-
 function getCommandGroups(pi: ExtensionAPI): CommandGroups {
-  const groups = emptyCommandGroups();
+  const groups: CommandGroups = { builtin: [...BUILTIN_COMMANDS], extension: [], skill: [], prompt: [] };
   for (const command of pi.getCommands()) {
     const category = categoryFromSource(command.source);
     groups[category].push({
@@ -99,25 +100,84 @@ function getCommandGroups(pi: ExtensionAPI): CommandGroups {
   return groups;
 }
 
-class HierarchicalSlashEditor extends CustomEditor {
-  private readonly commandGroups: () => CommandGroups;
+class MenuTreeEditorDecorator implements EditorComponent {
+  private readonly inner: FocusableEditor;
+  private readonly tui: TUI;
   private readonly editorTheme: EditorTheme;
+  private readonly commandGroups: () => CommandGroups;
   private menu?: SelectList;
   private menuCategory?: CommandCategory;
 
-  constructor(
-    tui: TUI,
-    theme: EditorTheme,
-    keybindings: KeybindingsManager,
-    commandGroups: () => CommandGroups,
-  ) {
-    super(tui, theme, keybindings);
+  constructor(inner: EditorComponent, tui: TUI, theme: EditorTheme, commandGroups: () => CommandGroups) {
+    this.inner = inner as FocusableEditor;
+    this.tui = tui;
     this.editorTheme = theme;
     this.commandGroups = commandGroups;
   }
 
-  override setAutocompleteProvider(provider: AutocompleteProvider): void {
-    super.setAutocompleteProvider({
+  get focused(): boolean {
+    return this.inner.focused ?? false;
+  }
+
+  set focused(value: boolean) {
+    this.inner.focused = value;
+  }
+
+  get onSubmit(): ((text: string) => void) | undefined {
+    return this.inner.onSubmit;
+  }
+
+  set onSubmit(handler: ((text: string) => void) | undefined) {
+    this.inner.onSubmit = handler;
+  }
+
+  get onChange(): ((text: string) => void) | undefined {
+    return this.inner.onChange;
+  }
+
+  set onChange(handler: ((text: string) => void) | undefined) {
+    this.inner.onChange = handler;
+  }
+
+  get borderColor(): ((text: string) => string) | undefined {
+    return this.inner.borderColor;
+  }
+
+  set borderColor(color: ((text: string) => string) | undefined) {
+    this.inner.borderColor = color;
+  }
+
+  getText(): string {
+    return this.inner.getText();
+  }
+
+  getExpandedText(): string {
+    return this.inner.getExpandedText?.() ?? this.inner.getText();
+  }
+
+  setText(text: string): void {
+    this.closeMenu();
+    this.inner.setText(text);
+  }
+
+  addToHistory(text: string): void {
+    this.inner.addToHistory?.(text);
+  }
+
+  insertTextAtCursor(text: string): void {
+    this.inner.insertTextAtCursor?.(text);
+  }
+
+  setPaddingX(padding: number): void {
+    this.inner.setPaddingX?.(padding);
+  }
+
+  setAutocompleteMaxVisible(maxVisible: number): void {
+    this.inner.setAutocompleteMaxVisible?.(maxVisible);
+  }
+
+  setAutocompleteProvider(provider: AutocompleteProvider): void {
+    this.inner.setAutocompleteProvider?.({
       triggerCharacters: provider.triggerCharacters,
       getSuggestions: async (lines, cursorLine, cursorCol, options) => {
         const textBeforeCursor = (lines[cursorLine] ?? "").slice(0, cursorCol);
@@ -131,9 +191,9 @@ class HierarchicalSlashEditor extends CustomEditor {
     });
   }
 
-  override handleInput(data: string): void {
-    if (!this.menu && data === "/" && this.getText() === "") {
-      super.handleInput(data);
+  handleInput(data: string): void {
+    if (!this.menu && data === "/" && this.inner.getText() === "") {
+      this.inner.handleInput(data);
       this.openRootMenu();
       return;
     }
@@ -141,14 +201,14 @@ class HierarchicalSlashEditor extends CustomEditor {
     if (this.menu) {
       if (matchesKey(data, Key.backspace)) {
         this.closeMenu();
-        super.handleInput(data);
+        this.inner.handleInput(data);
         return;
       }
 
-      // Typing a command name keeps Pi's normal `/model`-style autocomplete available.
+      // Typing a command name keeps Pi's normal `/model` autocomplete available.
       if (!this.menuCategory && data.length === 1 && data.charCodeAt(0) >= 32) {
         this.closeMenu();
-        super.handleInput(data);
+        this.inner.handleInput(data);
         return;
       }
 
@@ -157,22 +217,14 @@ class HierarchicalSlashEditor extends CustomEditor {
       return;
     }
 
-    // Fallback for a slash inserted programmatically or pasted into the editor.
-    if (this.getText() === "/" && matchesKey(data, Key.enter)) {
-      this.openRootMenu();
-      return;
-    }
-
-    super.handleInput(data);
+    this.inner.handleInput(data);
   }
 
-  override render(width: number): string[] {
-    const lines = super.render(width);
+  render(width: number): string[] {
+    const lines = this.inner.render(width);
     if (!this.menu) return lines;
 
-    const presentation = this.menuCategory
-      ? CATEGORY_PRESENTATION[this.menuCategory]
-      : undefined;
+    const presentation = this.menuCategory ? CATEGORY_PRESENTATION[this.menuCategory] : undefined;
     const title = presentation
       ? `↳ ${presentation.prefix} ${presentation.label}  ·  Esc to go back`
       : "Select a command group  ·  Esc to close";
@@ -182,6 +234,11 @@ class HierarchicalSlashEditor extends CustomEditor {
       truncateToWidth(title, width),
       ...this.menu.render(width),
     ];
+  }
+
+  invalidate(): void {
+    this.inner.invalidate();
+    this.menu?.invalidate();
   }
 
   private openRootMenu(): void {
@@ -200,19 +257,26 @@ class HierarchicalSlashEditor extends CustomEditor {
       });
 
     this.menuCategory = undefined;
-    this.menu = this.createMenu(items, (item) => {
-      if (isCategory(item.value)) this.openCommandMenu(item.value);
-    }, () => this.closeMenu());
+    this.menu = this.createMenu(
+      items,
+      (item) => {
+        if (isCategory(item.value)) this.openCommandMenu(item.value);
+      },
+      () => this.closeMenu(),
+    );
     this.tui.requestRender();
   }
 
   private openCommandMenu(category: CommandCategory): void {
-    const items = this.commandGroups()[category];
     this.menuCategory = category;
-    this.menu = this.createMenu(items, (item) => {
-      super.setText(`/${item.value} `);
-      this.closeMenu();
-    }, () => this.openRootMenu());
+    this.menu = this.createMenu(
+      this.commandGroups()[category],
+      (item) => {
+        this.inner.setText(`/${item.value} `);
+        this.closeMenu();
+      },
+      () => this.openRootMenu(),
+    );
     this.tui.requestRender();
   }
 
@@ -234,11 +298,15 @@ class HierarchicalSlashEditor extends CustomEditor {
   }
 }
 
-export default function groupedSlashMenu(pi: ExtensionAPI): void {
+export default function piMenuTree(pi: ExtensionAPI): void {
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new HierarchicalSlashEditor(tui, theme, keybindings, () => getCommandGroups(pi)),
-    );
+
+    const currentEditorFactory = ctx.ui.getEditorComponent();
+    ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+      const inner = currentEditorFactory?.(tui, theme, keybindings)
+        ?? new CustomEditor(tui, theme, keybindings);
+      return new MenuTreeEditorDecorator(inner, tui, theme, () => getCommandGroups(pi));
+    });
   });
 }

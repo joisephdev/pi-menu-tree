@@ -20,10 +20,11 @@ Mejorar el autocompletado que aparece al escribir `/` en Pi, para que los comand
 ## Decisiones técnicas
 
 - Usar la API pública de Pi; no modificar ni hacer fork de Pi.
-- Reemplazar únicamente el editor con una subclase de `CustomEditor`; Pi conserva sus atajos y conecta el proveedor nativo automáticamente.
+- Decorar el editor ya activo en vez de reemplazarlo. El wrapper delega renderizado, entrada, callbacks y autocomplete al editor base, permitiendo convivir con editores como `pi-droid-styling` BoxEditor.
 - Obtener extensiones, prompts y skills mediante `pi.getCommands()`, que incluye su campo canónico `source`.
 - Definir los comandos nativos en un catálogo local porque `pi.getCommands()` no los devuelve.
 - Suprimir solo el autocompletado nativo cuando el texto es exactamente `/`; el menú jerárquico se renderiza como parte del editor, no como modal.
+- Cargar Pi Menu Tree después de la extensión que aporta el editor base para que pueda envolverla.
 
 ## Estructura prevista
 

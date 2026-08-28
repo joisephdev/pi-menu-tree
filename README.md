@@ -52,12 +52,13 @@ Restart Pi or run `/reload` after installing or updating the package.
 
 ## How it works
 
-Pi Menu Tree replaces only Pi's editor component, using Pi's public `CustomEditor` extension API. It retains Pi's application shortcuts and delegates all autocomplete except the exact `/` input, which opens this package's menu tree.
+Pi Menu Tree decorates the active editor through Pi's public editor API. It retains the underlying editor's styling and application shortcuts, delegating all autocomplete except the exact `/` input, which opens this package's menu tree.
 
 ## Compatibility
 
 - Pi with extension support.
 - Node.js 20 or later.
+- Compatible with custom editors such as `@sting8k/pi-droid-styling`; install Pi Menu Tree after the styling extension so it can decorate that editor.
 
 ## Security
 
