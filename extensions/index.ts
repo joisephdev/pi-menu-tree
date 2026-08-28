@@ -115,6 +115,47 @@ class MenuTreeEditorDecorator implements EditorComponent {
     this.commandGroups = commandGroups;
   }
 
+  // Pi's setCustomEditorComponent checks for these duck-typed members on the custom editor.
+  // If they are missing, app-level keybindings (ctrl+c clear, ctrl+d exit, esc) are not copied
+  // from defaultEditor and appear to be "broken". Proxy them to the inner CustomEditor.
+  get actionHandlers(): Map<string, () => void> {
+    return (this.inner as any).actionHandlers ?? ((this.inner as any).actionHandlers = new Map());
+  }
+  set actionHandlers(value: Map<string, () => void>) {
+    (this.inner as any).actionHandlers = value;
+  }
+  get onEscape(): (() => void) | undefined {
+    return (this.inner as any).onEscape;
+  }
+  set onEscape(handler: (() => void) | undefined) {
+    (this.inner as any).onEscape = handler;
+  }
+  get onCtrlD(): (() => void) | undefined {
+    return (this.inner as any).onCtrlD;
+  }
+  set onCtrlD(handler: (() => void) | undefined) {
+    (this.inner as any).onCtrlD = handler;
+  }
+  get onPasteImage(): (() => void) | undefined {
+    return (this.inner as any).onPasteImage;
+  }
+  set onPasteImage(handler: (() => void) | undefined) {
+    (this.inner as any).onPasteImage = handler;
+  }
+  get onExtensionShortcut(): ((data: string) => boolean) | undefined {
+    return (this.inner as any).onExtensionShortcut;
+  }
+  set onExtensionShortcut(handler: ((data: string) => boolean) | undefined) {
+    (this.inner as any).onExtensionShortcut = handler;
+  }
+  onAction(action: string, handler: () => void): void {
+    if (typeof (this.inner as any).onAction === "function") {
+      (this.inner as any).onAction(action, handler);
+    } else {
+      this.actionHandlers.set(action, handler);
+    }
+  }
+
   get focused(): boolean {
     return this.inner.focused ?? false;
   }
@@ -199,21 +240,34 @@ class MenuTreeEditorDecorator implements EditorComponent {
     }
 
     if (this.menu) {
+      // Fix: no tragarse todos los atajos globales (ctrl+c, ctrl+d, ctrl+u, etc.)
+      // Solo deja que SelectList maneje navegación real; el resto cierra el menú y se propaga al editor.
+      const isMenuNavigation =
+        matchesKey(data, Key.up) ||
+        matchesKey(data, Key.down) ||
+        matchesKey(data, Key.enter) ||
+        matchesKey(data, Key.escape) ||
+        matchesKey(data, Key.ctrl("c")) ||
+        matchesKey(data, "pageUp") ||
+        matchesKey(data, "pageDown");
+
+      if (isMenuNavigation) {
+        this.menu.handleInput(data);
+        this.tui.requestRender();
+        return;
+      }
+
       if (matchesKey(data, Key.backspace)) {
         this.closeMenu();
         this.inner.handleInput(data);
         return;
       }
 
-      // Typing a command name keeps Pi's normal `/model` autocomplete available.
-      if (!this.menuCategory && data.length === 1 && data.charCodeAt(0) >= 32) {
-        this.closeMenu();
-        this.inner.handleInput(data);
-        return;
-      }
-
-      this.menu.handleInput(data);
-      this.tui.requestRender();
+      // Any other key (printable, ctrl+*, etc.) closes the menu and propagates.
+      // Previously only checked root menu with data.length===1, which broke
+      // Kitty protocol (ctrl+c = \x1b[99;5u) and sub-menu typing.
+      this.closeMenu();
+      this.inner.handleInput(data);
       return;
     }
 
