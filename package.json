@@ -10,6 +10,15 @@
     "terminal"
   ],
   "license": "MIT",
+  "author": "joisephdev",
+  "homepage": "https://github.com/joisephdev/pi-menu-tree#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joisephdev/pi-menu-tree.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joisephdev/pi-menu-tree/issues"
+  },
   "files": [
     "extensions",
     "README.md",

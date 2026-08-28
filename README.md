@@ -50,6 +50,20 @@ pi install ./pi-menu-tree
 
 Restart Pi or run `/reload` after installing or updating the package.
 
+## Publishing
+
+The GitHub Actions workflow publishes when a version tag is pushed. It uses npm trusted publishing (OIDC), so no long-lived npm token is stored in GitHub.
+
+Before the first release, configure `joisephdev/pi-menu-tree` as a trusted publisher for this package in npm. Then publish a release by updating `version` in `package.json` and pushing its matching tag:
+
+```bash
+npm version 0.1.0
+# Review the generated commit and tag.
+git push origin main --follow-tags
+```
+
+The tag must match the package version, for example `v0.1.0`.
+
 ## How it works
 
 Pi Menu Tree decorates the active editor through Pi's public editor API. It retains the underlying editor's styling and application shortcuts, delegating all autocomplete except the exact `/` input, which opens this package's menu tree.
