@@ -44,10 +44,10 @@ interface FocusableEditor extends EditorComponent {
 }
 
 const CATEGORY_PRESENTATION: Readonly<Record<CommandCategory, CategoryPresentation>> = {
-  [CATEGORY.BUILTIN]: { label: "Native commands", prefix: "⚙" },
-  [CATEGORY.EXTENSION]: { label: "Extensions", prefix: "🧩" },
-  [CATEGORY.SKILL]: { label: "Skills", prefix: "🧠" },
-  [CATEGORY.PROMPT]: { label: "Prompt templates", prefix: "📋" },
+  [CATEGORY.BUILTIN]: { label: "Native commands", prefix: "" },
+  [CATEGORY.EXTENSION]: { label: "Extensions", prefix: "" },
+  [CATEGORY.SKILL]: { label: "Skills", prefix: "" },
+  [CATEGORY.PROMPT]: { label: "Prompt templates", prefix: "" },
 };
 
 // pi.getCommands() intentionally excludes these interactive-only commands.
@@ -291,7 +291,7 @@ class MenuTreeEditorDecorator implements EditorComponent {
 
     const presentation = this.menuCategory ? CATEGORY_PRESENTATION[this.menuCategory] : undefined;
     const title = presentation
-      ? `↳ ${presentation.prefix} ${presentation.label}  ·  Esc to go back`
+      ? `${presentation.prefix ? `${presentation.prefix} ` : ""}${presentation.label}  ·  Esc to go back`
       : "Select a command group  ·  Esc to close";
 
     return [
@@ -316,7 +316,7 @@ class MenuTreeEditorDecorator implements EditorComponent {
         const count = commands.length;
         return {
           value: category,
-          label: `${presentation.prefix} ${presentation.label}`,
+          label: presentation.prefix ? `${presentation.prefix} ${presentation.label}` : presentation.label,
           description: `${count} command${count === 1 ? "" : "s"}`,
         };
       });

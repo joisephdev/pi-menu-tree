@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.5 — 2026-08-28
+
+### Changed
+
+- Remove category emojis (`⚙` `🧩` `🧠` `📋`) for a more professional appearance. `CATEGORY_PRESENTATION` now uses empty `prefix` and labels render without icons (`extensions/index.ts:46-51,288-319`).
+
 ## 0.1.4 — 2026-08-28
 
 ### Changed
