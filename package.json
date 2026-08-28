@@ -1,6 +1,6 @@
 {
   "name": "pi-menu-tree",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A hierarchical slash-command menu for Pi.",
   "keywords": [
     "pi-package",

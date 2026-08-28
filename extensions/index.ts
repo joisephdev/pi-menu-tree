@@ -337,8 +337,11 @@ class MenuTreeEditorDecorator implements EditorComponent {
     this.menu = this.createMenu(
       this.commandGroups()[category],
       (item) => {
-        this.inner.setText(`/${item.value} `);
         this.closeMenu();
+        // Auto-execute: set the slash command and submit immediately so the
+        // user doesn't need a 4th Enter ("/" -> category -> command -> Enter).
+        this.inner.setText(`/${item.value}`);
+        this.inner.handleInput("\r");
       },
       () => this.openRootMenu(),
     );

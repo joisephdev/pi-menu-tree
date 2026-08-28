@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.4 — 2026-08-28
+
+### Changed
+
+- Slash-command menu now auto-executes on selection: `"/"` → category → `Enter` on command immediately submits `"/<command>"` via `handleInput("\\r")`, saving the 4th `Enter` (`"/"`, `Enter` category, `Enter` command, `Enter` submit → now 3 steps).
+
 ## 0.1.3 — 2026-08-28
 
 ### Fixed
