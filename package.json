@@ -1,0 +1,29 @@
+{
+  "name": "pi-menu-tree",
+  "version": "0.1.0",
+  "description": "A hierarchical slash-command menu for Pi.",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "command-menu",
+    "terminal"
+  ],
+  "license": "MIT",
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions/index.ts"]
+  }
+}
