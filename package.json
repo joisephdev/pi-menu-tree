@@ -1,6 +1,6 @@
 {
   "name": "pi-menu-tree",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A hierarchical slash-command menu for Pi.",
   "keywords": [
     "pi-package",
@@ -33,6 +33,8 @@
     "@earendil-works/pi-tui": "*"
   },
   "pi": {
-    "extensions": ["./extensions/index.ts"]
+    "extensions": [
+      "./extensions/index.ts"
+    ]
   }
 }
