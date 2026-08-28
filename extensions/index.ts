@@ -240,20 +240,31 @@ class MenuTreeEditorDecorator implements EditorComponent {
     }
 
     if (this.menu) {
-      // Fix: no tragarse todos los atajos globales (ctrl+c, ctrl+d, ctrl+u, etc.)
-      // Solo deja que SelectList maneje navegación real; el resto cierra el menú y se propaga al editor.
+      // Only SelectList navigation goes to the menu. Any other key — especially
+      // app-level bindings like ctrl+c (app.clear), ctrl+d (app.exit) or esc
+      // (app.interrupt) — must close the menu and propagate to the inner
+      // CustomEditor so Pi can clear/exit/interrupt. Previously everything was
+      // swallowed by menu.handleInput, breaking global bindings.
       const isMenuNavigation =
         matchesKey(data, Key.up) ||
         matchesKey(data, Key.down) ||
         matchesKey(data, Key.enter) ||
-        matchesKey(data, Key.escape) ||
-        matchesKey(data, Key.ctrl("c")) ||
         matchesKey(data, "pageUp") ||
         matchesKey(data, "pageDown");
 
       if (isMenuNavigation) {
         this.menu.handleInput(data);
         this.tui.requestRender();
+        return;
+      }
+
+      // ctrl+c / esc should both close the menu and reach app handlers.
+      // Letting them fall through to the generic close+forward below makes a
+      // single ctrl+c from "/" close the menu AND clear the editor, so a
+      // quick double ctrl+c still exits (handleCtrlC 500ms window).
+      if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c"))) {
+        this.closeMenu();
+        this.inner.handleInput(data);
         return;
       }
 
